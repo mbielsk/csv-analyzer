@@ -9,13 +9,6 @@ import (
 )
 
 func GetTransactions(filter models.TransactionFilter, page, perPage int) (*models.PaginatedTransactions, error) {
-	if page < 1 {
-		page = 1
-	}
-	if perPage < 1 || perPage > 500 {
-		perPage = 50
-	}
-
 	whereClause, args := buildWhereClause(filter)
 
 	// Count total
@@ -25,18 +18,22 @@ func GetTransactions(filter models.TransactionFilter, page, perPage int) (*model
 		return nil, err
 	}
 
-	totalPages := (totalItems + perPage - 1) / perPage
-	offset := (page - 1) * perPage
+	// Build query - if page/perPage are 0, return all
+	usePagination := page > 0 && perPage > 0
 
-	// Get data
 	query := `
 		SELECT t.id, t.file_id, t.category, t.source, t.description, 
 		       t.amount, t.amount_original, t.is_paid, t.is_cash, t.transaction_date, t.created_at
 		FROM transactions t
 		LEFT JOIN files f ON t.file_id = f.id
-	` + whereClause + " ORDER BY t.created_at DESC LIMIT ? OFFSET ?"
+	` + whereClause + " ORDER BY t.created_at DESC"
 
-	args = append(args, perPage, offset)
+	if usePagination {
+		offset := (page - 1) * perPage
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, perPage, offset)
+	}
+
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -61,11 +58,23 @@ func GetTransactions(filter models.TransactionFilter, page, perPage int) (*model
 		transactions = append(transactions, t)
 	}
 
+	// Calculate pagination info
+	resultPerPage := perPage
+	resultPage := page
+	totalPages := 1
+
+	if usePagination {
+		totalPages = (totalItems + perPage - 1) / perPage
+	} else {
+		resultPerPage = totalItems
+		resultPage = 1
+	}
+
 	return &models.PaginatedTransactions{
 		Data: transactions,
 		Pagination: models.Pagination{
-			Page:       page,
-			PerPage:    perPage,
+			Page:       resultPage,
+			PerPage:    resultPerPage,
 			TotalItems: totalItems,
 			TotalPages: totalPages,
 		},

@@ -1,85 +1,94 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { FileData } from '@/types';
-import { parseCSVFile } from '@/utils/csvParser';
+import type { Transaction, FileData } from '@/types';
+import { api, type ApiTransaction, type TransactionFilter } from '@/api/client';
 import { calculatePaymentSummary, groupByCategory, getTopCategories, getTopCategory, groupBySource, getTopSources } from '@/utils/aggregations';
 import { filterByCategory } from '@/utils/tableUtils';
 
-const STORAGE_KEY = 'kiro-finance-files';
-
-function loadFromStorage(): FileData[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-    // ignore parse errors
-  }
-  return [];
-}
-
-function saveToStorage(files: FileData[]) {
-  try {
-    if (files.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(files));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  } catch {
-    // ignore storage errors
-  }
-}
-
-function generateFileId(): string {
-  return `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Map API transaction to frontend Transaction
+function mapTransaction(t: ApiTransaction): Transaction {
+  return {
+    id: t.id,
+    fileId: t.fileId,
+    rodzaj: t.category,
+    skad: t.source,
+    co: t.description,
+    zaIle: t.amount,
+    zaIleOriginal: t.amountOriginal,
+    oplacone: t.isPaid,
+    gotowka: t.isCash || '',
+    transactionDate: t.transactionDate,
+  };
 }
 
 export function useTransactions() {
-  const [files, setFiles] = useState<FileData[]>(() => loadFromStorage());
-  const [selectedFileIds, setSelectedFileIds] = useState<string[]>(() => {
-    const loaded = loadFromStorage();
-    return loaded.length > 0 ? [loaded[0].id] : [];
-  });
+  const [files, setFiles] = useState<FileData[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [excludedSources, setExcludedSources] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Save to localStorage when files change
+  // Load files on mount
   useEffect(() => {
-    saveToStorage(files);
-  }, [files]);
+    loadFiles();
+  }, []);
 
-  // Get transactions from selected files (before exclusions)
-  const rawTransactions = useMemo(() => {
-    if (selectedFileIds.length === 0 || selectedFileIds.includes('all')) {
-      return files.flatMap(f => f.transactions);
+  // Load transactions when selection or exclusions change
+  useEffect(() => {
+    if (files.length > 0) {
+      loadTransactions();
     }
-    return files
-      .filter(f => selectedFileIds.includes(f.id))
-      .flatMap(f => f.transactions);
-  }, [files, selectedFileIds]);
+  }, [selectedFileIds, excludedCategories, excludedSources, files.length]);
+
+  const loadFiles = async () => {
+    try {
+      setIsLoading(true);
+      const apiFiles = await api.getFiles();
+      const mapped: FileData[] = apiFiles.map(f => ({
+        id: f.id,
+        name: f.name,
+        uploadedAt: f.uploadedAt,
+      }));
+      setFiles(mapped);
+      
+      // Select first file by default if none selected
+      if (mapped.length > 0 && selectedFileIds.length === 0) {
+        setSelectedFileIds([mapped[0].id]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load files');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTransactions = async () => {
+    try {
+      const filter: TransactionFilter = {
+        fileIds: selectedFileIds.includes('all') ? undefined : selectedFileIds,
+        excludeCategories: excludedCategories.length > 0 ? excludedCategories : undefined,
+        excludeSources: excludedSources.length > 0 ? excludedSources : undefined,
+      };
+      
+      const result = await api.getTransactions(filter);
+      setTransactions(result.data.map(mapTransaction));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load transactions');
+    }
+  };
 
   // Get all unique categories and sources (for filter dropdowns)
   const allCategories = useMemo(() => {
-    const cats = new Set(rawTransactions.map(t => t.rodzaj));
+    const cats = new Set(transactions.map(t => t.rodzaj));
     return Array.from(cats).sort();
-  }, [rawTransactions]);
+  }, [transactions]);
 
   const allSources = useMemo(() => {
-    const srcs = new Set(rawTransactions.map(t => t.skad));
+    const srcs = new Set(transactions.map(t => t.skad));
     return Array.from(srcs).sort();
-  }, [rawTransactions]);
-
-  // Apply exclusions
-  const transactions = useMemo(() => {
-    return rawTransactions.filter(t => {
-      if (excludedCategories.includes(t.rodzaj)) return false;
-      if (excludedSources.includes(t.skad)) return false;
-      return true;
-    });
-  }, [rawTransactions, excludedCategories, excludedSources]);
+  }, [transactions]);
 
   const paymentSummary = useMemo(() => calculatePaymentSummary(transactions), [transactions]);
   const categoryTotals = useMemo(() => groupByCategory(transactions), [transactions]);
@@ -96,40 +105,45 @@ export function useTransactions() {
     setIsLoading(true);
     setError(null);
     try {
-      const parsed = await parseCSVFile(file);
-      const fileId = generateFileId();
-      const transactionsWithFileId = parsed.map(t => ({ ...t, fileId }));
+      const result = await api.uploadFile(file);
       
       const newFile: FileData = {
-        id: fileId,
-        name: file.name,
-        transactions: transactionsWithFileId,
-        uploadedAt: Date.now(),
+        id: result.file.id,
+        name: result.file.name,
+        uploadedAt: result.file.uploadedAt,
+        transactionCount: result.transactionCount,
       };
       
       setFiles(prev => [...prev, newFile]);
       
       // If this is the first file, select it
-      setSelectedFileIds(prev => prev.length === 0 ? [fileId] : prev);
+      if (files.length === 0) {
+        setSelectedFileIds([newFile.id]);
+      }
+      
       setCategoryFilter(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse file');
+      setError(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [files.length]);
 
-  const handleRemoveFile = useCallback((fileId: string) => {
-    setFiles(prev => prev.filter(f => f.id !== fileId));
-    setSelectedFileIds(prev => {
-      const newSelected = prev.filter(id => id !== fileId);
-      // If we removed the only selected file, select the first remaining
-      if (newSelected.length === 0) {
-        const remaining = files.filter(f => f.id !== fileId);
-        return remaining.length > 0 ? [remaining[0].id] : [];
-      }
-      return newSelected;
-    });
+  const handleRemoveFile = useCallback(async (fileId: string) => {
+    try {
+      await api.deleteFile(fileId);
+      setFiles(prev => prev.filter(f => f.id !== fileId));
+      setSelectedFileIds(prev => {
+        const newSelected = prev.filter(id => id !== fileId);
+        if (newSelected.length === 0) {
+          const remaining = files.filter(f => f.id !== fileId);
+          return remaining.length > 0 ? [remaining[0].id] : [];
+        }
+        return newSelected;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete file');
+    }
   }, [files]);
 
   const handleSelectFiles = useCallback((fileIds: string[]) => {
@@ -137,14 +151,24 @@ export function useTransactions() {
     setCategoryFilter(null);
   }, []);
 
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
+    // Delete all files from backend
+    try {
+      for (const file of files) {
+        await api.deleteFile(file.id);
+      }
+    } catch {
+      // ignore errors during reset
+    }
+    
     setFiles([]);
+    setTransactions([]);
     setSelectedFileIds([]);
     setExcludedCategories([]);
     setExcludedSources([]);
     setCategoryFilter(null);
     setError(null);
-  }, []);
+  }, [files]);
 
   const handleCategoryFilter = useCallback((category: string | null) => {
     setCategoryFilter(prev => prev === category ? null : category);

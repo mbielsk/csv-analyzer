@@ -1,20 +1,21 @@
 export interface Transaction {
   id: string;
-  rodzaj: string;
-  skad: string;
-  co: string;
-  zaIle: number;
-  zaIleOriginal: string;
-  oplacone: boolean;
-  gotowka: string;
   fileId?: string;
+  rodzaj: string;      // category
+  skad: string;        // source
+  co: string;          // description
+  zaIle: number;       // amount
+  zaIleOriginal: string; // amountOriginal
+  oplacone: boolean;   // isPaid
+  gotowka: string;     // isCash
+  transactionDate?: string | null;
 }
 
 export interface FileData {
   id: string;
   name: string;
-  transactions: Transaction[];
   uploadedAt: number;
+  transactionCount?: number;
 }
 
 export interface CategoryTotal {
@@ -37,6 +38,8 @@ export interface PaymentSummary {
   unpaidAmount: number;
   paidCount: number;
   unpaidCount: number;
+  cashAmount: number;
+  cashCount: number;
 }
 
 export interface AppState {

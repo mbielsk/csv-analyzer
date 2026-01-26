@@ -6,6 +6,8 @@ export function calculatePaymentSummary(transactions: Transaction[]): PaymentSum
   let unpaidAmount = 0;
   let paidCount = 0;
   let unpaidCount = 0;
+  let cashAmount = 0;
+  let cashCount = 0;
 
   for (const t of transactions) {
     totalSpent += t.zaIle;
@@ -16,9 +18,15 @@ export function calculatePaymentSummary(transactions: Transaction[]): PaymentSum
       unpaidAmount += t.zaIle;
       unpaidCount++;
     }
+    
+    const isCash = t.gotowka?.toLowerCase();
+    if (isCash === '✅' || isCash === 'tak' || isCash === 'yes' || isCash === 'true') {
+      cashAmount += t.zaIle;
+      cashCount++;
+    }
   }
 
-  return { totalSpent, paidAmount, unpaidAmount, paidCount, unpaidCount };
+  return { totalSpent, paidAmount, unpaidAmount, paidCount, unpaidCount, cashAmount, cashCount };
 }
 
 export function groupByCategory(transactions: Transaction[]): CategoryTotal[] {

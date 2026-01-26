@@ -18,6 +18,7 @@ const (
 )
 
 var currencyRegex = regexp.MustCompile(`[złusdPLNUSDEUR€$]`)
+var decimalEndRegex = regexp.MustCompile(`,\d{2}$`)
 
 func ParseCSV(reader io.Reader, fileID string) ([]models.Transaction, error) {
 	csvReader := csv.NewReader(reader)
@@ -85,7 +86,6 @@ func parseRow(record []string, colIndex map[string]int, fileID string) *models.T
 
 	var transactionDate *string
 	if dateStr := getValue("Data"); dateStr != "" {
-		// Try to parse and validate date
 		if parsed := parseDate(dateStr); parsed != "" {
 			transactionDate = &parsed
 		}
@@ -137,10 +137,12 @@ func normalizeAmount(value string) *float64 {
 			cleaned = strings.ReplaceAll(cleaned, ",", "")
 		}
 	} else if hasComma {
-		// Only comma - check if decimal or thousands
-		if matched, _ := regexp.MatchString(`,\d{2}$`, cleaned); matched {
+		// Only comma - check if decimal (,XX at end) or thousands separator
+		if decimalEndRegex.MatchString(cleaned) {
+			// Decimal separator: 123,45 -> 123.45
 			cleaned = strings.Replace(cleaned, ",", ".", 1)
 		} else {
+			// Thousands separator: 1,234 -> 1234
 			cleaned = strings.ReplaceAll(cleaned, ",", "")
 		}
 	}
@@ -154,7 +156,6 @@ func normalizeAmount(value string) *float64 {
 }
 
 func parseDate(dateStr string) string {
-	// Try common formats
 	formats := []string{
 		"2006-01-02",
 		"02-01-2006",

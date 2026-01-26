@@ -158,8 +158,15 @@ func DeleteFile(c *gin.Context) {
 
 func GetTransactions(c *gin.Context) {
 	filter := parseFilter(c)
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "50"))
+
+	// Only use pagination if explicitly requested
+	var page, perPage int
+	if pageStr := c.Query("page"); pageStr != "" {
+		page, _ = strconv.Atoi(pageStr)
+	}
+	if perPageStr := c.Query("per_page"); perPageStr != "" {
+		perPage, _ = strconv.Atoi(perPageStr)
+	}
 
 	result, err := services.GetTransactions(filter, page, perPage)
 	if err != nil {

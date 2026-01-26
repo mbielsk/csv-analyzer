@@ -1,4 +1,4 @@
-import { DollarSign, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
+import { DollarSign, CheckCircle, XCircle, TrendingUp, Banknote } from 'lucide-react';
 import type { Transaction, CategoryTotal, PaymentSummary, SourceTotal } from '@/types';
 import { KPICard } from './KPICard';
 import { TransactionTable } from './TransactionTable';
@@ -29,10 +29,14 @@ export function Dashboard({
   topSources,
   onCategoryFilter,
 }: DashboardProps) {
+  const cashPercentage = paymentSummary.totalSpent > 0 
+    ? (paymentSummary.cashAmount / paymentSummary.totalSpent * 100).toFixed(1)
+    : '0';
+
   return (
     <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
       {/* KPI Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <KPICard
           title="Total Spent"
           value={`${(Math.round(paymentSummary.totalSpent * 100) / 100).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`}
@@ -47,6 +51,11 @@ export function Dashboard({
           title="Unpaid"
           value={`${(Math.round(paymentSummary.unpaidAmount * 100) / 100).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`}
           icon={<XCircle className="w-5 h-5 text-red-500" />}
+        />
+        <KPICard
+          title="Cash"
+          value={`${(Math.round(paymentSummary.cashAmount * 100) / 100).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł (${cashPercentage}%)`}
+          icon={<Banknote className="w-5 h-5 text-emerald-600" />}
         />
         <KPICard
           title="Top Category"

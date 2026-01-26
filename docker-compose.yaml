@@ -8,13 +8,13 @@ services:
 
   backend:
     build: ./backend
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     volumes:
       - ./data:/app/data
       - ./backend/config.json:/app/config.json:ro
     environment:
       - DB_PATH=/app/data/finance.db
       - GIN_MODE=release
-      - CORS_ORIGINS=http://localhost:5300,http://localhost:5173
+      - CORS_ORIGINS=http://localhost:5300
     restart: unless-stopped

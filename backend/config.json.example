@@ -1,0 +1,6 @@
+{
+  "port": "8080",
+  "db_path": "./data/finance.db",
+  "gin_mode": "debug",
+  "cors_origins": "http://localhost:5173,http://localhost:5300"
+}

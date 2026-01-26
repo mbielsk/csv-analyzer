@@ -4,20 +4,20 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
+	"kiro-finance-backend/internal/config"
 )
 
 var DB *sql.DB
 
 func Init() error {
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "./data/finance.db"
-	}
+	dbPath := config.Cfg.DBPath
 
 	// Ensure directory exists
-	if err := os.MkdirAll("./data", 0755); err != nil {
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 

@@ -1,16 +1,20 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"kiro-finance-backend/internal/config"
 )
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
 	// CORS
+	origins := strings.Split(config.Cfg.CORSOrigins, ",")
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5300"},
+		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
 		AllowCredentials: true,

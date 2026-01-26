@@ -1,0 +1,11 @@
+server
+*.exe
+*.db
+*.sqlite
+data/
+.git
+.gitignore
+*.md
+.vscode
+.idea
+config.json

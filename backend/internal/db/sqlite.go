@@ -70,6 +70,42 @@ func runMigrations() error {
 		`CREATE INDEX IF NOT EXISTS idx_transactions_source ON transactions(source)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_is_paid ON transactions(is_paid)`,
 		`CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date)`,
+		// Recurring patterns
+		`CREATE TABLE IF NOT EXISTS recurring_patterns (
+			id TEXT PRIMARY KEY,
+			source TEXT NOT NULL,
+			category TEXT NOT NULL,
+			description_pattern TEXT,
+			avg_amount REAL NOT NULL,
+			min_amount REAL,
+			max_amount REAL,
+			amount_variance REAL,
+			frequency TEXT,
+			avg_interval_days INTEGER,
+			interval_variance REAL,
+			last_occurrence TEXT,
+			next_expected TEXT,
+			occurrence_count INTEGER NOT NULL,
+			confidence REAL NOT NULL,
+			detection_mode TEXT NOT NULL,
+			is_confirmed INTEGER,
+			user_label TEXT,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_source ON recurring_patterns(source)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_category ON recurring_patterns(category)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_confidence ON recurring_patterns(confidence DESC)`,
+		// Junction table
+		`CREATE TABLE IF NOT EXISTS recurring_transactions (
+			pattern_id TEXT NOT NULL,
+			transaction_id TEXT NOT NULL,
+			PRIMARY KEY (pattern_id, transaction_id),
+			FOREIGN KEY (pattern_id) REFERENCES recurring_patterns(id) ON DELETE CASCADE,
+			FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_tx_pattern ON recurring_transactions(pattern_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_recurring_tx_transaction ON recurring_transactions(transaction_id)`,
 	}
 
 	for _, m := range migrations {

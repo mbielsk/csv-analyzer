@@ -73,7 +73,12 @@ func CreateFile(name string) (*models.File, error) {
 
 func DeleteFile(id string) error {
 	_, err := db.DB.Exec("DELETE FROM files WHERE id = ?", id)
-	return err
+	if err != nil {
+		return err
+	}
+	// Recalculate recurring patterns after file deletion
+	go DetectRecurringPatterns()
+	return nil
 }
 
 func SaveTransactions(transactions []models.Transaction) error {
@@ -107,7 +112,13 @@ func SaveTransactions(transactions []models.Transaction) error {
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// Recalculate recurring patterns after new transactions
+	go DetectRecurringPatterns()
+	return nil
 }
 
 func DeleteTransactionsByFileID(fileID string) error {

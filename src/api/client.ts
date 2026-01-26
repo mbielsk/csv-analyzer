@@ -154,4 +154,69 @@ export const api = {
     const params = buildFilterParams(filter);
     return request<CategoryTotal | null>(`/stats/top-category?${params}`);
   },
+
+  // Recurring
+  getRecurring: (minConfidence = 0.5) => {
+    const params = new URLSearchParams();
+    params.set('min_confidence', String(minConfidence));
+    return request<RecurringResponse>(`/recurring?${params}`);
+  },
+
+  getRecurringPattern: (id: string) => request<RecurringPatternWithTransactions>(`/recurring/${id}`),
+
+  updateRecurringPattern: (id: string, data: RecurringUpdateRequest) =>
+    request<{ message: string }>(`/recurring/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteRecurringPattern: (id: string) =>
+    request<{ message: string }>(`/recurring/${id}`, { method: 'DELETE' }),
+
+  recalculateRecurring: () =>
+    request<{ message: string }>('/recurring/recalculate', { method: 'POST' }),
 };
+
+// Recurring types
+export interface RecurringPattern {
+  id: string;
+  source: string;
+  category: string;
+  descriptionPattern: string | null;
+  avgAmount: number;
+  minAmount: number | null;
+  maxAmount: number | null;
+  amountVariance: number | null;
+  frequency: string | null;
+  avgIntervalDays: number | null;
+  intervalVariance: number | null;
+  lastOccurrence: string | null;
+  nextExpected: string | null;
+  occurrenceCount: number;
+  confidence: number;
+  detectionMode: string;
+  isConfirmed: boolean | null;
+  userLabel: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface RecurringPatternWithTransactions extends RecurringPattern {
+  transactions: ApiTransaction[];
+}
+
+export interface RecurringSummary {
+  totalMonthly: number;
+  totalYearly: number;
+  patternCount: number;
+}
+
+export interface RecurringResponse {
+  patterns: RecurringPattern[];
+  summary: RecurringSummary;
+}
+
+export interface RecurringUpdateRequest {
+  isConfirmed?: boolean;
+  userLabel?: string;
+}

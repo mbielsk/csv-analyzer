@@ -347,3 +347,78 @@ func parseFilter(c *gin.Context) models.TransactionFilter {
 
 	return filter
 }
+
+// Recurring handlers
+
+func GetRecurringPatterns(c *gin.Context) {
+	minConfidence := 0.5
+	if mc := c.Query("min_confidence"); mc != "" {
+		if val, err := strconv.ParseFloat(mc, 64); err == nil {
+			minConfidence = val
+		}
+	}
+
+	confirmedOnly := c.Query("confirmed_only") == "true"
+	includeRejected := c.Query("include_rejected") == "true"
+
+	result, err := services.GetRecurringPatterns(minConfidence, confirmedOnly, includeRejected)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result.Patterns == nil {
+		result.Patterns = []models.RecurringPattern{}
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func GetRecurringPattern(c *gin.Context) {
+	id := c.Param("id")
+
+	pattern, err := services.GetRecurringPatternByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pattern not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, pattern)
+}
+
+func UpdateRecurringPattern(c *gin.Context) {
+	id := c.Param("id")
+
+	var req models.RecurringUpdateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := services.UpdateRecurringPattern(id, req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pattern updated"})
+}
+
+func DeleteRecurringPattern(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := services.DeleteRecurringPattern(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pattern rejected"})
+}
+
+func RecalculateRecurring(c *gin.Context) {
+	if err := services.DetectRecurringPatterns(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Patterns recalculated"})
+}

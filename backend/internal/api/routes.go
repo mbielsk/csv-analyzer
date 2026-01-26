@@ -40,6 +40,13 @@ func SetupRouter() *gin.Engine {
 		api.GET("/stats/categories", GetCategories)
 		api.GET("/stats/sources", GetSources)
 		api.GET("/stats/top-category", GetTopCategory)
+
+		// Recurring
+		api.GET("/recurring", GetRecurringPatterns)
+		api.GET("/recurring/:id", GetRecurringPattern)
+		api.PUT("/recurring/:id", UpdateRecurringPattern)
+		api.DELETE("/recurring/:id", DeleteRecurringPattern)
+		api.POST("/recurring/recalculate", RecalculateRecurring)
 	}
 
 	return r

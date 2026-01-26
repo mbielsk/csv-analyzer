@@ -5,6 +5,7 @@ import { TransactionTable } from './TransactionTable';
 import { SpendingPieChart } from './SpendingPieChart';
 import { CategoryBarChart } from './CategoryBarChart';
 import { SourceBarChart } from './SourceBarChart';
+import { RecurringPanel } from './RecurringPanel';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -79,6 +80,9 @@ export function Dashboard({
         <CategoryBarChart data={topCategories} limit={5} />
         <SourceBarChart data={topSources} limit={5} />
       </div>
+
+      {/* Recurring Panel */}
+      <RecurringPanel />
 
       {/* Filter indicator */}
       {categoryFilter && (

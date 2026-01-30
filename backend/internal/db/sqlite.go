@@ -22,10 +22,14 @@ func Init() error {
 	}
 
 	var err error
-	DB, err = sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
+	DB, err = sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return err
 	}
+
+	// Set connection pool settings for better concurrency
+	DB.SetMaxOpenConns(10)
+	DB.SetMaxIdleConns(5)
 
 	if err = DB.Ping(); err != nil {
 		return err

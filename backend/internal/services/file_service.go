@@ -76,8 +76,8 @@ func DeleteFile(id string) error {
 	if err != nil {
 		return err
 	}
-	// Recalculate recurring patterns after file deletion
-	go DetectRecurringPatterns()
+	// Recalculate recurring patterns after file deletion (async with mutex)
+	TriggerRecurringDetection()
 	return nil
 }
 
@@ -116,8 +116,8 @@ func SaveTransactions(transactions []models.Transaction) error {
 		return err
 	}
 
-	// Recalculate recurring patterns after new transactions
-	go DetectRecurringPatterns()
+	// Recalculate recurring patterns after new transactions (async with mutex)
+	TriggerRecurringDetection()
 	return nil
 }
 

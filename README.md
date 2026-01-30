@@ -1,73 +1,111 @@
-# React + TypeScript + Vite
+# Kiro Finance
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Personal finance dashboard for analyzing CSV transaction exports.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **CSV Import** - Upload transaction CSV files (supports Polish bank formats)
+- **Multi-file Support** - Load multiple files, select which to analyze
+- **KPI Dashboard** - Total spent, paid/unpaid, cash transactions
+- **Charts** - Pie chart by category (with drill-down to source), bar charts
+- **Filtering** - Exclude categories/sources from calculations
+- **Recurring Detection** - Automatic detection of subscriptions and recurring payments
+- **Pagination** - Table with 20/50 records per page
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Frontend:**
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS + shadcn/ui
+- Nivo (charts)
+- TanStack Table
 
-## Expanding the ESLint configuration
+**Backend:**
+- Go 1.22 + Gin
+- SQLite (with CGO)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Quick Start
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Docker (recommended)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+docker-compose up -d --build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+App available at http://localhost:5300
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Development
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Backend:**
+```bash
+cd backend
+cp config.json.example config.json
+go run ./cmd/server
 ```
+
+**Frontend:**
+```bash
+npm install
+npm run dev
+```
+
+Create `.env.local` for dev:
+```
+VITE_API_URL=http://localhost:8080/api
+```
+
+## CSV Format
+
+Expected format (Polish bank export):
+- First 3 rows: metadata (skipped)
+- Row 4: headers
+- Columns: `Rodzaj`, `Skąd`, `Co`, `Za ile`, `Opłacone?`, `Gotówka`, `Data` (optional)
+
+Example:
+```csv
+...metadata...
+...metadata...
+...metadata...
+Rodzaj,Skąd,Co,Za ile,Opłacone?,Gotówka,Data
+Rozrywka,Netflix,Subskrypcja,"49,00 zł",✅,,2024-01-15
+```
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/files` | List uploaded files |
+| POST | `/api/files` | Upload CSV file |
+| DELETE | `/api/files/:id` | Delete file |
+| GET | `/api/transactions` | Get transactions (with filters) |
+| GET | `/api/stats/summary` | Payment summary |
+| GET | `/api/stats/categories` | Category totals |
+| GET | `/api/recurring` | Detected recurring patterns |
+| POST | `/api/recurring/recalculate` | Force pattern recalculation |
+
+## Project Structure
+
+```
+├── backend/
+│   ├── cmd/server/         # Entry point
+│   ├── internal/
+│   │   ├── api/            # HTTP handlers & routes
+│   │   ├── db/             # SQLite connection
+│   │   ├── models/         # Data models
+│   │   ├── parser/         # CSV parser
+│   │   └── services/       # Business logic
+│   └── Dockerfile
+├── src/
+│   ├── api/                # API client
+│   ├── components/         # React components
+│   ├── hooks/              # Custom hooks
+│   ├── types/              # TypeScript types
+│   └── utils/              # Utilities
+├── docker-compose.yaml
+└── Dockerfile              # Frontend
+```
+
+## License
+
+MIT

@@ -1,15 +1,43 @@
 package services
 
 import (
+	"log"
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"kiro-finance-backend/internal/db"
 	"kiro-finance-backend/internal/models"
 )
+
+var recurringMutex sync.Mutex
+var recurringInProgress bool
+
+// TriggerRecurringDetection starts async detection if not already running
+func TriggerRecurringDetection() {
+	recurringMutex.Lock()
+	if recurringInProgress {
+		recurringMutex.Unlock()
+		return
+	}
+	recurringInProgress = true
+	recurringMutex.Unlock()
+
+	go func() {
+		defer func() {
+			recurringMutex.Lock()
+			recurringInProgress = false
+			recurringMutex.Unlock()
+		}()
+
+		if err := DetectRecurringPatterns(); err != nil {
+			log.Printf("Recurring detection error: %v", err)
+		}
+	}()
+}
 
 // GetRecurringPatterns returns all patterns with optional filtering
 func GetRecurringPatterns(minConfidence float64, confirmedOnly, includeRejected bool) (*models.RecurringResponse, error) {
@@ -380,30 +408,39 @@ func detectPatterns(groups []models.TransactionGroup) []models.RecurringPattern 
 }
 
 func savePatterns(patterns []models.RecurringPattern) error {
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	// Get existing confirmed patterns
 	confirmedMap := make(map[string]bool)
-	rows, err := db.DB.Query("SELECT source, category FROM recurring_patterns WHERE is_confirmed = 1")
+	rows, err := tx.Query("SELECT source, category FROM recurring_patterns WHERE is_confirmed = 1")
 	if err == nil {
-		defer rows.Close()
 		for rows.Next() {
 			var source, category string
 			rows.Scan(&source, &category)
 			confirmedMap[source+"|"+category] = true
 		}
+		rows.Close()
 	}
 
 	// Delete non-confirmed patterns
-	_, err = db.DB.Exec("DELETE FROM recurring_patterns WHERE is_confirmed IS NULL OR is_confirmed = 0")
+	_, err = tx.Exec("DELETE FROM recurring_patterns WHERE is_confirmed IS NULL OR is_confirmed = 0")
 	if err != nil {
 		return err
 	}
+
+	// Delete orphaned recurring_transactions
+	_, _ = tx.Exec("DELETE FROM recurring_transactions WHERE pattern_id NOT IN (SELECT id FROM recurring_patterns)")
 
 	// Insert new patterns (skip if confirmed version exists)
 	for _, p := range patterns {
 		key := p.Source + "|" + p.Category
 		if confirmedMap[key] {
 			// Update stats for confirmed pattern instead
-			_, err = db.DB.Exec(`
+			_, err = tx.Exec(`
 				UPDATE recurring_patterns 
 				SET avg_amount = ?, min_amount = ?, max_amount = ?, amount_variance = ?,
 				    frequency = ?, avg_interval_days = ?, interval_variance = ?,
@@ -417,7 +454,7 @@ func savePatterns(patterns []models.RecurringPattern) error {
 			continue
 		}
 
-		_, err = db.DB.Exec(`
+		_, err = tx.Exec(`
 			INSERT INTO recurring_patterns (
 				id, source, category, description_pattern, avg_amount, min_amount, max_amount,
 				amount_variance, frequency, avg_interval_days, interval_variance, last_occurrence,
@@ -431,20 +468,23 @@ func savePatterns(patterns []models.RecurringPattern) error {
 		}
 
 		// Link transactions to pattern
-		txRows, _ := db.DB.Query(`
-			SELECT id FROM transactions WHERE source = ? AND category = ?
-		`, p.Source, p.Category)
+		txRows, _ := tx.Query(`SELECT id FROM transactions WHERE source = ? AND category = ?`, p.Source, p.Category)
 		if txRows != nil {
+			var txIDs []string
 			for txRows.Next() {
 				var txID string
 				txRows.Scan(&txID)
-				db.DB.Exec("INSERT OR IGNORE INTO recurring_transactions (pattern_id, transaction_id) VALUES (?, ?)", p.ID, txID)
+				txIDs = append(txIDs, txID)
 			}
 			txRows.Close()
+
+			for _, txID := range txIDs {
+				tx.Exec("INSERT OR IGNORE INTO recurring_transactions (pattern_id, transaction_id) VALUES (?, ?)", p.ID, txID)
+			}
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 // Helper functions

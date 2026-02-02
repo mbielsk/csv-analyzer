@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, Check, ChevronDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, Check, ChevronDown, Search } from 'lucide-react';
 
 interface ExcludeFiltersProps {
   categories: string[];
@@ -20,6 +20,13 @@ interface MultiSelectProps {
 
 function MultiSelect({ label, items, selectedItems, onChange, color }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return items;
+    const lower = search.toLowerCase();
+    return items.filter(item => item.toLowerCase().includes(lower));
+  }, [items, search]);
 
   const toggleItem = (item: string) => {
     if (selectedItems.includes(item)) {
@@ -31,6 +38,11 @@ function MultiSelect({ label, items, selectedItems, onChange, color }: MultiSele
 
   const clearAll = () => {
     onChange([]);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setSearch('');
   };
 
   const colorClasses = color === 'red' 
@@ -58,39 +70,59 @@ function MultiSelect({ label, items, selectedItems, onChange, color }: MultiSele
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 z-20 bg-white border rounded-md shadow-lg min-w-[200px] max-h-[300px] overflow-auto">
+          <div className="fixed inset-0 z-10" onClick={handleClose} />
+          <div className="absolute top-full left-0 mt-1 z-20 bg-white border rounded-md shadow-lg min-w-[250px] max-h-[350px] flex flex-col">
+            {/* Search input */}
+            <div className="p-2 border-b">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Szukaj..."
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
             {selectedItems.length > 0 && (
               <button
                 onClick={clearAll}
-                className="w-full px-3 py-2 text-sm text-left text-gray-500 hover:bg-gray-50 border-b"
+                className="px-3 py-2 text-sm text-left text-gray-500 hover:bg-gray-50 border-b"
               >
-                Clear all exclusions
+                Wyczyść wszystkie ({selectedItems.length})
               </button>
             )}
-            {items.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500">No items</div>
-            ) : (
-              items.map(item => {
-                const isSelected = selectedItems.includes(item);
-                return (
-                  <button
-                    key={item}
-                    onClick={() => toggleItem(item)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 ${
-                      isSelected ? colorClasses.text : 'text-gray-700'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      isSelected ? colorClasses.check : 'border-gray-400'
-                    }`}>
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <span className="truncate">{item || '(empty)'}</span>
-                  </button>
-                );
-              })
-            )}
+
+            <div className="overflow-auto flex-1">
+              {filteredItems.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                  {search ? 'Brak wyników' : 'Brak elementów'}
+                </div>
+              ) : (
+                filteredItems.map(item => {
+                  const isSelected = selectedItems.includes(item);
+                  return (
+                    <button
+                      key={item}
+                      onClick={() => toggleItem(item)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 ${
+                        isSelected ? colorClasses.text : 'text-gray-700'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                        isSelected ? colorClasses.check : 'border-gray-400'
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="truncate">{item || '(empty)'}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
         </>
       )}

@@ -9,7 +9,7 @@ type Transaction struct {
 	Amount          float64 `json:"amount"`
 	AmountOriginal  string  `json:"amountOriginal"`
 	IsPaid          bool    `json:"isPaid"`
-	IsCash          string  `json:"isCash"`
+	Bank            string  `json:"bank"`
 	TransactionDate *string `json:"transactionDate"`
 	CreatedAt       int64   `json:"createdAt"`
 }

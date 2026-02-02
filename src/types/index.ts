@@ -7,7 +7,7 @@ export interface Transaction {
   zaIle: number;       // amount
   zaIleOriginal: string; // amountOriginal
   oplacone: boolean;   // isPaid
-  gotowka: string;     // isCash
+  bank: string;        // bank name or "Cash"
   transactionDate?: string | null;
 }
 
@@ -58,7 +58,7 @@ export interface CSVParseConfig {
     co: string;
     zaIle: string;
     oplacone: string;
-    gotowka: string;
+    bank: string;
   };
 }
 
@@ -71,6 +71,6 @@ export const CSV_CONFIG: CSVParseConfig = {
     co: 'Co',
     zaIle: 'Za ile',
     oplacone: 'Opłacone?',
-    gotowka: 'Gotówka',
+    bank: 'Bank',
   },
 };

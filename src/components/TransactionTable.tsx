@@ -107,23 +107,17 @@ export function TransactionTable({ transactions, categoryFilter }: TransactionTa
       ),
     },
     {
-      accessorKey: 'gotowka',
+      accessorKey: 'bank',
       header: ({ column }) => (
         <button
           className="flex items-center gap-1 hover:text-gray-900"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Gotówka
+          Bank
           <ArrowUpDown className="w-4 h-4" />
         </button>
       ),
-      cell: ({ row }) => {
-        const val = row.original.gotowka?.toLowerCase();
-        const isCash = val === '✅' || val === 'tak' || val === 'yes' || val === 'true';
-        return isCash 
-          ? <Check className="w-5 h-5 text-green-600" />
-          : <X className="w-5 h-5 text-red-400" />;
-      },
+      cell: ({ row }) => row.original.bank || '—',
     },
   ], []);
 

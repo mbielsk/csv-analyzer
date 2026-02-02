@@ -100,7 +100,7 @@ func parseRow(record []string, colIndex map[string]int, fileID string) *models.T
 		Amount:          *amount,
 		AmountOriginal:  amountOriginal,
 		IsPaid:          isPaid,
-		IsCash:          getValue("Gotówka"),
+		Bank:            getValue("Bank"),
 		TransactionDate: transactionDate,
 		CreatedAt:       time.Now().Unix(),
 	}

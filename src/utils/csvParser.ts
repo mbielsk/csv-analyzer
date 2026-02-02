@@ -34,7 +34,7 @@ export function parseCSV(csvContent: string): Transaction[] {
     co: headers.indexOf(CSV_CONFIG.columns.co),
     zaIle: headers.indexOf(CSV_CONFIG.columns.zaIle),
     oplacone: headers.indexOf(CSV_CONFIG.columns.oplacone),
-    gotowka: headers.indexOf(CSV_CONFIG.columns.gotowka),
+    bank: headers.indexOf(CSV_CONFIG.columns.bank),
   };
 
   const transactions: Transaction[] = [];
@@ -59,7 +59,7 @@ export function parseCSV(csvContent: string): Transaction[] {
       zaIle,
       zaIleOriginal,
       oplacone: parsePaymentStatus(row[colIndex.oplacone] || ''),
-      gotowka: row[colIndex.gotowka] || '',
+      bank: row[colIndex.bank] || '',
     });
   }
 

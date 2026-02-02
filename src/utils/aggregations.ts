@@ -19,8 +19,8 @@ export function calculatePaymentSummary(transactions: Transaction[]): PaymentSum
       unpaidCount++;
     }
     
-    const isCash = t.gotowka?.toLowerCase();
-    if (isCash === '✅' || isCash === 'tak' || isCash === 'yes' || isCash === 'true') {
+    // Cash is when bank field equals "Cash" (case-insensitive)
+    if (t.bank?.toLowerCase() === 'cash') {
       cashAmount += t.zaIle;
       cashCount++;
     }

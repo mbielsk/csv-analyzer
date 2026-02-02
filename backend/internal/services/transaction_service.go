@@ -23,7 +23,7 @@ func GetTransactions(filter models.TransactionFilter, page, perPage int) (*model
 
 	query := `
 		SELECT t.id, t.file_id, t.category, t.source, t.description, 
-		       t.amount, t.amount_original, t.is_paid, t.is_cash, t.transaction_date, t.created_at
+		       t.amount, t.amount_original, t.is_paid, t.bank, t.transaction_date, t.created_at
 		FROM transactions t
 		LEFT JOIN files f ON t.file_id = f.id
 	` + whereClause + " ORDER BY t.created_at DESC"
@@ -48,7 +48,7 @@ func GetTransactions(filter models.TransactionFilter, page, perPage int) (*model
 
 		if err := rows.Scan(
 			&t.ID, &t.FileID, &t.Category, &t.Source, &t.Description,
-			&t.Amount, &t.AmountOriginal, &isPaid, &t.IsCash, &transactionDate, &t.CreatedAt,
+			&t.Amount, &t.AmountOriginal, &isPaid, &t.Bank, &transactionDate, &t.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -88,11 +88,11 @@ func GetTransactionByID(id string) (*models.Transaction, error) {
 
 	err := db.DB.QueryRow(`
 		SELECT id, file_id, category, source, description, amount, amount_original, 
-		       is_paid, is_cash, transaction_date, created_at
+		       is_paid, bank, transaction_date, created_at
 		FROM transactions WHERE id = ?
 	`, id).Scan(
 		&t.ID, &t.FileID, &t.Category, &t.Source, &t.Description,
-		&t.Amount, &t.AmountOriginal, &isPaid, &t.IsCash, &transactionDate, &t.CreatedAt,
+		&t.Amount, &t.AmountOriginal, &isPaid, &t.Bank, &transactionDate, &t.CreatedAt,
 	)
 
 	if err != nil {

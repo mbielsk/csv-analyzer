@@ -15,7 +15,7 @@ function mapTransaction(t: ApiTransaction): Transaction {
     zaIle: t.amount,
     zaIleOriginal: t.amountOriginal,
     oplacone: t.isPaid,
-    gotowka: t.isCash || '',
+    bank: t.bank || '',
     transactionDate: t.transactionDate,
   };
 }

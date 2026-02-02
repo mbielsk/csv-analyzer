@@ -89,7 +89,7 @@ func SaveTransactions(transactions []models.Transaction) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO transactions (id, file_id, category, source, description, amount, amount_original, is_paid, is_cash, transaction_date, created_at)
+		INSERT INTO transactions (id, file_id, category, source, description, amount, amount_original, is_paid, bank, transaction_date, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -105,7 +105,7 @@ func SaveTransactions(transactions []models.Transaction) error {
 
 		_, err := stmt.Exec(
 			t.ID, t.FileID, t.Category, t.Source, t.Description,
-			t.Amount, t.AmountOriginal, isPaid, t.IsCash, t.TransactionDate, t.CreatedAt,
+			t.Amount, t.AmountOriginal, isPaid, t.Bank, t.TransactionDate, t.CreatedAt,
 		)
 		if err != nil {
 			return err

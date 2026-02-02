@@ -64,7 +64,7 @@ func runMigrations() error {
 			amount REAL NOT NULL,
 			amount_original TEXT NOT NULL,
 			is_paid INTEGER NOT NULL DEFAULT 0,
-			is_cash TEXT,
+			bank TEXT,
 			transaction_date TEXT,
 			created_at INTEGER NOT NULL,
 			FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE

@@ -46,7 +46,7 @@ export interface ApiTransaction {
   amount: number;
   amountOriginal: string;
   isPaid: boolean;
-  isCash: string;
+  bank: string;
   transactionDate: string | null;
   createdAt: number;
 }

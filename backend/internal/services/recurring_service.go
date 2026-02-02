@@ -153,7 +153,7 @@ func GetRecurringPatternByID(id string) (*models.RecurringPatternWithTransaction
 	// Get associated transactions
 	rows, err := db.DB.Query(`
 		SELECT t.id, t.file_id, t.category, t.source, t.description, t.amount,
-		       t.amount_original, t.is_paid, t.is_cash, t.transaction_date, t.created_at
+		       t.amount_original, t.is_paid, t.bank, t.transaction_date, t.created_at
 		FROM transactions t
 		JOIN recurring_transactions rt ON t.id = rt.transaction_id
 		WHERE rt.pattern_id = ?
@@ -169,7 +169,7 @@ func GetRecurringPatternByID(id string) (*models.RecurringPatternWithTransaction
 		var t models.Transaction
 		var isPaid int
 		err := rows.Scan(&t.ID, &t.FileID, &t.Category, &t.Source, &t.Description,
-			&t.Amount, &t.AmountOriginal, &isPaid, &t.IsCash, &t.TransactionDate, &t.CreatedAt)
+			&t.Amount, &t.AmountOriginal, &isPaid, &t.Bank, &t.TransactionDate, &t.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func DetectRecurringPatterns() error {
 	// Get all transactions
 	rows, err := db.DB.Query(`
 		SELECT id, file_id, category, source, description, amount, amount_original,
-		       is_paid, is_cash, transaction_date, created_at
+		       is_paid, bank, transaction_date, created_at
 		FROM transactions
 		ORDER BY source, category, transaction_date
 	`)
@@ -242,7 +242,7 @@ func DetectRecurringPatterns() error {
 		var t models.Transaction
 		var isPaid int
 		err := rows.Scan(&t.ID, &t.FileID, &t.Category, &t.Source, &t.Description,
-			&t.Amount, &t.AmountOriginal, &isPaid, &t.IsCash, &t.TransactionDate, &t.CreatedAt)
+			&t.Amount, &t.AmountOriginal, &isPaid, &t.Bank, &t.TransactionDate, &t.CreatedAt)
 		if err != nil {
 			return err
 		}

@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
 import { ResponsivePie } from '@nivo/pie';
 import { ArrowLeft } from 'lucide-react';
-import type { CategoryTotal, Transaction } from '@/types';
+import type { Transaction } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface SpendingPieChartProps {
-  data: CategoryTotal[];
+interface FundingPieChartProps {
   transactions: Transaction[];
-  onSliceClick: (category: string) => void;
 }
 
 const COLORS = [
@@ -17,62 +15,81 @@ const COLORS = [
   '#d946ef', '#64748b', '#fb7185', '#4ade80', '#38bdf8'
 ];
 
-type DisplayMode = 'value' | 'percent';
+type DisplayMode = 'percent' | 'value';
 
-export function SpendingPieChart({ data, transactions, onSliceClick }: SpendingPieChartProps) {
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('value');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+export function FundingPieChart({ transactions }: FundingPieChartProps) {
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('percent');
+  const [selectedBank, setSelectedBank] = useState<string | null>(null);
   
-  const total = data.reduce((s, d) => s + d.total, 0);
-  
-  // Calculate source breakdown for selected category
-  const sourceBreakdown = useMemo(() => {
-    if (!selectedCategory) return [];
+  // Calculate bank totals
+  const bankTotals = useMemo(() => {
+    const bankMap = new Map<string, number>();
     
-    const categoryTransactions = transactions.filter(t => t.rodzaj === selectedCategory);
-    const sourceMap = new Map<string, number>();
-    
-    for (const t of categoryTransactions) {
-      const source = t.skad || 'Nieznane';
-      sourceMap.set(source, (sourceMap.get(source) || 0) + t.zaIle);
+    for (const t of transactions) {
+      const bank = t.bank || 'Unknown';
+      bankMap.set(bank, (bankMap.get(bank) || 0) + t.zaIle);
     }
     
-    const categoryTotal = categoryTransactions.reduce((s, t) => s + t.zaIle, 0);
+    const total = transactions.reduce((s, t) => s + t.zaIle, 0);
     
-    return Array.from(sourceMap.entries())
-      .map(([source, amount], index) => ({
-        id: source,
-        label: source,
+    return Array.from(bankMap.entries())
+      .map(([bank, amount]) => ({
+        bank,
+        total: amount,
+        count: transactions.filter(t => (t.bank || 'Unknown') === bank).length,
+        percentage: total > 0 ? (amount / total) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [transactions]);
+  
+  const total = bankTotals.reduce((s, d) => s + d.total, 0);
+  
+  // Calculate category breakdown for selected bank
+  const categoryBreakdown = useMemo(() => {
+    if (!selectedBank) return [];
+    
+    const bankTransactions = transactions.filter(t => (t.bank || 'Unknown') === selectedBank);
+    const categoryMap = new Map<string, number>();
+    
+    for (const t of bankTransactions) {
+      const category = t.rodzaj || 'Nieznane';
+      categoryMap.set(category, (categoryMap.get(category) || 0) + t.zaIle);
+    }
+    
+    const bankTotal = bankTransactions.reduce((s, t) => s + t.zaIle, 0);
+    
+    return Array.from(categoryMap.entries())
+      .map(([category, amount], index) => ({
+        id: category,
+        label: category,
         value: Math.round(amount * 100) / 100,
-        percentage: categoryTotal > 0 ? (amount / categoryTotal) * 100 : 0,
+        percentage: bankTotal > 0 ? (amount / bankTotal) * 100 : 0,
         color: COLORS[index % COLORS.length],
       }))
       .sort((a, b) => b.value - a.value);
-  }, [selectedCategory, transactions]);
+  }, [selectedBank, transactions]);
   
-  const chartData = data.map((d, index) => ({
-    id: d.category,
-    label: d.category,
+  const chartData = bankTotals.map((d, index) => ({
+    id: d.bank,
+    label: d.bank,
     value: Math.round(d.total * 100) / 100,
     percentage: total > 0 ? (d.total / total) * 100 : 0,
     color: COLORS[index % COLORS.length],
   }));
 
-  const handleCategoryClick = (category: string) => {
-    setSelectedCategory(category);
-    onSliceClick(category);
+  const handleBankClick = (bank: string) => {
+    setSelectedBank(bank);
   };
 
   const handleBack = () => {
-    setSelectedCategory(null);
-    onSliceClick(''); // Clear filter
+    setSelectedBank(null);
   };
 
-  if (data.length === 0) {
+  if (transactions.length === 0) {
     return (
       <Card className="bg-white h-full">
         <CardHeader>
-          <CardTitle className="text-lg">Spending Breakdown</CardTitle>
+          <CardTitle className="text-lg">Funding Breakdown</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-64">
           <p className="text-gray-500">No data to display</p>
@@ -81,16 +98,16 @@ export function SpendingPieChart({ data, transactions, onSliceClick }: SpendingP
     );
   }
 
-  const currentData = selectedCategory ? sourceBreakdown : chartData;
-  const currentTotal = selectedCategory 
-    ? sourceBreakdown.reduce((s, d) => s + d.value, 0)
+  const currentData = selectedBank ? categoryBreakdown : chartData;
+  const currentTotal = selectedBank 
+    ? categoryBreakdown.reduce((s, d) => s + d.value, 0)
     : total;
 
   return (
     <Card className="bg-white h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
-          {selectedCategory && (
+          {selectedBank && (
             <button
               onClick={handleBack}
               className="p-1 hover:bg-gray-100 rounded"
@@ -99,20 +116,10 @@ export function SpendingPieChart({ data, transactions, onSliceClick }: SpendingP
             </button>
           )}
           <CardTitle className="text-lg">
-            {selectedCategory ? `${selectedCategory} by Source` : 'Spending Breakdown'}
+            {selectedBank ? `${selectedBank} by Category` : 'Funding Breakdown'}
           </CardTitle>
         </div>
         <div className="flex bg-gray-100 rounded-md p-0.5">
-          <button
-            onClick={() => setDisplayMode('value')}
-            className={`px-3 py-1 text-xs rounded transition-colors ${
-              displayMode === 'value' 
-                ? 'bg-white shadow text-gray-900' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            zł
-          </button>
           <button
             onClick={() => setDisplayMode('percent')}
             className={`px-3 py-1 text-xs rounded transition-colors ${
@@ -123,13 +130,23 @@ export function SpendingPieChart({ data, transactions, onSliceClick }: SpendingP
           >
             %
           </button>
+          <button
+            onClick={() => setDisplayMode('value')}
+            className={`px-3 py-1 text-xs rounded transition-colors ${
+              displayMode === 'value' 
+                ? 'bg-white shadow text-gray-900' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            zł
+          </button>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 p-2">
-        <div style={{ height: '250px' }}>
+      <CardContent className="flex-1 flex items-center justify-center">
+        <div className="w-full h-full" style={{ minHeight: '300px' }}>
           <ResponsivePie
             data={currentData}
-            margin={{ top: 15, right: 80, bottom: 15, left: 80 }}
+            margin={{ top: 5, right: 80, bottom: 5, left: 80 }}
             innerRadius={0.5}
             padAngle={0.7}
             cornerRadius={3}
@@ -151,8 +168,8 @@ export function SpendingPieChart({ data, transactions, onSliceClick }: SpendingP
               return `${Math.round(d.value)} zł`;
             }}
             onClick={(node) => {
-              if (!selectedCategory) {
-                handleCategoryClick(node.id as string);
+              if (!selectedBank) {
+                handleBankClick(node.id as string);
               }
             }}
             tooltip={({ datum }) => {

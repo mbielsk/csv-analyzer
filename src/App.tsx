@@ -13,7 +13,7 @@ function App() {
     selectedFileIds,
     transactions,
     filteredTransactions,
-    categoryFilter,
+    chartFilter,
     isLoading,
     error,
     paymentSummary,
@@ -29,7 +29,7 @@ function App() {
     handleRemoveFile,
     handleSelectFiles,
     handleReset,
-    handleCategoryFilter,
+    handleChartFilter,
     handleExcludeCategoriesChange,
     handleExcludeSourcesChange,
   } = useTransactions();
@@ -122,13 +122,13 @@ function App() {
             <Dashboard
               transactions={transactions}
               filteredTransactions={filteredTransactions}
-              categoryFilter={categoryFilter}
+              chartFilter={chartFilter}
               paymentSummary={paymentSummary}
               categoryTotals={categoryTotals}
               topCategories={topCategories}
               topCategory={topCategory}
               topSources={topSources}
-              onCategoryFilter={handleCategoryFilter}
+              onChartFilter={handleChartFilter}
             />
           ) : (
             <div className="p-12 text-center text-gray-500">

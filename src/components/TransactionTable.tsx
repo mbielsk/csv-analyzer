@@ -11,20 +11,19 @@ import {
 } from '@tanstack/react-table';
 import { ArrowUpDown, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Transaction } from '@/types';
+import type { ChartFilter } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/utils/amountNormalizer';
 
 interface TransactionTableProps {
   transactions: Transaction[];
-  categoryFilter: string | null;
+  chartFilter?: ChartFilter;
 }
 
-export function TransactionTable({ transactions, categoryFilter }: TransactionTableProps) {
+export function TransactionTable({ transactions }: TransactionTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const filteredData = useMemo(() => {
-    if (!categoryFilter) return transactions;
-    return transactions.filter(t => t.rodzaj === categoryFilter);
-  }, [transactions, categoryFilter]);
+  // Transactions are already filtered by the hook, just use them directly
+  const filteredData = transactions;
 
   const columns = useMemo<ColumnDef<Transaction>[]>(() => [
     {
@@ -139,8 +138,8 @@ export function TransactionTable({ transactions, categoryFilter }: TransactionTa
   const currentPage = table.getState().pagination.pageIndex + 1;
 
   return (
-    <div className="rounded-lg border bg-white overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className="rounded-lg border bg-white overflow-hidden flex flex-col h-full">
+      <div className="overflow-x-auto overflow-y-auto flex-1">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             {table.getHeaderGroups().map(headerGroup => (

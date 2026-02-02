@@ -1,8 +1,9 @@
 import { DollarSign, CheckCircle, XCircle, TrendingUp, Banknote } from 'lucide-react';
 import type { Transaction, CategoryTotal, PaymentSummary, SourceTotal } from '@/types';
+import type { ChartFilter } from '@/hooks/useTransactions';
 import { KPICard } from './KPICard';
 import { TransactionTable } from './TransactionTable';
-import { SpendingPieChart } from './SpendingPieChart';
+import { BreakdownChart } from './BreakdownChart';
 import { CategoryBarChart } from './CategoryBarChart';
 import { SourceBarChart } from './SourceBarChart';
 import { RecurringPanel } from './RecurringPanel';
@@ -10,25 +11,25 @@ import { RecurringPanel } from './RecurringPanel';
 interface DashboardProps {
   transactions: Transaction[];
   filteredTransactions: Transaction[];
-  categoryFilter: string | null;
+  chartFilter: ChartFilter;
   paymentSummary: PaymentSummary;
   categoryTotals: CategoryTotal[];
   topCategories: CategoryTotal[];
   topCategory: CategoryTotal | null;
   topSources: SourceTotal[];
-  onCategoryFilter: (category: string | null) => void;
+  onChartFilter: (filter: ChartFilter) => void;
 }
 
 export function Dashboard({
   transactions,
   filteredTransactions,
-  categoryFilter,
+  chartFilter,
   paymentSummary,
   categoryTotals,
   topCategories,
   topCategory,
   topSources,
-  onCategoryFilter,
+  onChartFilter,
 }: DashboardProps) {
   const cashPercentage = paymentSummary.totalSpent > 0 
     ? (paymentSummary.cashAmount / paymentSummary.totalSpent * 100).toFixed(1)
@@ -67,11 +68,15 @@ export function Dashboard({
 
       {/* Middle Row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
-          <TransactionTable transactions={filteredTransactions} categoryFilter={categoryFilter} />
+        <div className="lg:col-span-3" style={{ height: '500px' }}>
+          <TransactionTable transactions={filteredTransactions} chartFilter={chartFilter} />
         </div>
-        <div className="lg:col-span-2">
-          <SpendingPieChart data={categoryTotals} transactions={transactions} onSliceClick={onCategoryFilter} />
+        <div className="lg:col-span-2" style={{ height: '500px' }}>
+          <BreakdownChart 
+            categoryTotals={categoryTotals} 
+            transactions={transactions} 
+            onFilterChange={onChartFilter}
+          />
         </div>
       </div>
 
@@ -85,11 +90,11 @@ export function Dashboard({
       <RecurringPanel />
 
       {/* Filter indicator */}
-      {categoryFilter && (
+      {chartFilter && (
         <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          Filtering: {categoryFilter}
+          Filtering by {chartFilter.type}: {chartFilter.value}
           <button
-            onClick={() => onCategoryFilter(null)}
+            onClick={() => onChartFilter(null)}
             className="ml-2 underline hover:no-underline"
           >
             Clear

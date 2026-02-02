@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Transaction, FileData } from '@/types';
 import { api, type ApiTransaction, type TransactionFilter } from '@/api/client';
 import { calculatePaymentSummary, groupByCategory, getTopCategories, getTopCategory, groupBySource, getTopSources } from '@/utils/aggregations';
-import { filterByCategory } from '@/utils/tableUtils';
+
+export type ChartFilter = { type: 'category' | 'bank'; value: string } | null;
 
 // Map API transaction to frontend Transaction
 function mapTransaction(t: ApiTransaction): Transaction {
@@ -26,7 +27,7 @@ export function useTransactions() {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [excludedSources, setExcludedSources] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [chartFilter, setChartFilter] = useState<ChartFilter>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,10 +97,17 @@ export function useTransactions() {
   const topCategory = useMemo(() => getTopCategory(transactions), [transactions]);
   const sourceTotals = useMemo(() => groupBySource(transactions), [transactions]);
   const topSources = useMemo(() => getTopSources(transactions, 5), [transactions]);
-  const filteredTransactions = useMemo(
-    () => filterByCategory(transactions, categoryFilter),
-    [transactions, categoryFilter]
-  );
+  
+  const filteredTransactions = useMemo(() => {
+    if (!chartFilter) return transactions;
+    if (chartFilter.type === 'category') {
+      return transactions.filter(t => t.rodzaj === chartFilter.value);
+    }
+    if (chartFilter.type === 'bank') {
+      return transactions.filter(t => (t.bank || 'Unknown') === chartFilter.value);
+    }
+    return transactions;
+  }, [transactions, chartFilter]);
 
   const handleFileUpload = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -121,7 +129,7 @@ export function useTransactions() {
         setSelectedFileIds([newFile.id]);
       }
       
-      setCategoryFilter(null);
+      setChartFilter(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
@@ -148,7 +156,7 @@ export function useTransactions() {
 
   const handleSelectFiles = useCallback((fileIds: string[]) => {
     setSelectedFileIds(fileIds);
-    setCategoryFilter(null);
+    setChartFilter(null);
   }, []);
 
   const handleReset = useCallback(async () => {
@@ -166,12 +174,12 @@ export function useTransactions() {
     setSelectedFileIds([]);
     setExcludedCategories([]);
     setExcludedSources([]);
-    setCategoryFilter(null);
+    setChartFilter(null);
     setError(null);
   }, [files]);
 
-  const handleCategoryFilter = useCallback((category: string | null) => {
-    setCategoryFilter(prev => prev === category ? null : category);
+  const handleChartFilter = useCallback((filter: ChartFilter) => {
+    setChartFilter(filter);
   }, []);
 
   const handleExcludeCategoriesChange = useCallback((categories: string[]) => {
@@ -187,7 +195,7 @@ export function useTransactions() {
     selectedFileIds,
     transactions,
     filteredTransactions,
-    categoryFilter,
+    chartFilter,
     isLoading,
     error,
     paymentSummary,
@@ -204,7 +212,7 @@ export function useTransactions() {
     handleRemoveFile,
     handleSelectFiles,
     handleReset,
-    handleCategoryFilter,
+    handleChartFilter,
     handleExcludeCategoriesChange,
     handleExcludeSourcesChange,
   };

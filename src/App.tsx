@@ -32,6 +32,10 @@ function App() {
     handleChartFilter,
     handleExcludeCategoriesChange,
     handleExcludeSourcesChange,
+    hasActiveFilters,
+    resetPrefs,
+    prefs,
+    setPrefs,
   } = useTransactions();
 
   const hasData = transactions.length > 0;
@@ -52,7 +56,12 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header onUploadClick={handleUploadClick} hasData={hasFiles} />
+      <Header 
+        onUploadClick={handleUploadClick} 
+        hasData={hasFiles} 
+        hasActiveFilters={hasActiveFilters}
+        onResetPreferences={resetPrefs}
+      />
       
       <input
         ref={fileInputRef}
@@ -129,6 +138,8 @@ function App() {
               topCategory={topCategory}
               topSources={topSources}
               onChartFilter={handleChartFilter}
+              prefs={prefs}
+              setPrefs={setPrefs}
             />
           ) : (
             <div className="p-12 text-center text-gray-500">

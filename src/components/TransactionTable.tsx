@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,9 +17,11 @@ import { formatCurrency } from '@/utils/amountNormalizer';
 interface TransactionTableProps {
   transactions: Transaction[];
   chartFilter?: ChartFilter;
+  pageSize?: number;
+  onPageSizeChange?: (size: number) => void;
 }
 
-export function TransactionTable({ transactions }: TransactionTableProps) {
+export function TransactionTable({ transactions, pageSize = 50, onPageSizeChange }: TransactionTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Transactions are already filtered by the hook, just use them directly
@@ -130,9 +132,14 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
-      pagination: { pageSize: 50 },
+      pagination: { pageSize },
     },
   });
+
+  // Update page size when prop changes
+  useEffect(() => {
+    table.setPageSize(pageSize);
+  }, [pageSize, table]);
 
   const pageCount = table.getPageCount();
   const currentPage = table.getState().pagination.pageIndex + 1;
@@ -178,7 +185,11 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
               <span className="text-sm text-gray-600">Na stronę:</span>
               <select
                 value={table.getState().pagination.pageSize}
-                onChange={e => table.setPageSize(Number(e.target.value))}
+                onChange={e => {
+                  const newSize = Number(e.target.value);
+                  table.setPageSize(newSize);
+                  onPageSizeChange?.(newSize);
+                }}
                 className="border rounded px-2 py-1 text-sm bg-white"
               >
                 <option value={20}>20</option>

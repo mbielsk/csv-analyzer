@@ -1,6 +1,7 @@
 import { DollarSign, CheckCircle, XCircle, TrendingUp, Banknote } from 'lucide-react';
 import type { Transaction, CategoryTotal, PaymentSummary, SourceTotal } from '@/types';
 import type { ChartFilter } from '@/hooks/useTransactions';
+import type { UserPreferences } from '@/hooks/useUserPreferences';
 import { KPICard } from './KPICard';
 import { TransactionTable } from './TransactionTable';
 import { BreakdownChart } from './BreakdownChart';
@@ -18,6 +19,8 @@ interface DashboardProps {
   topCategory: CategoryTotal | null;
   topSources: SourceTotal[];
   onChartFilter: (filter: ChartFilter) => void;
+  prefs: UserPreferences;
+  setPrefs: (updater: UserPreferences | ((prev: UserPreferences) => UserPreferences)) => void;
 }
 
 export function Dashboard({
@@ -30,6 +33,8 @@ export function Dashboard({
   topCategory,
   topSources,
   onChartFilter,
+  prefs,
+  setPrefs,
 }: DashboardProps) {
   const cashPercentage = paymentSummary.totalSpent > 0 
     ? (paymentSummary.cashAmount / paymentSummary.totalSpent * 100).toFixed(1)
@@ -69,7 +74,12 @@ export function Dashboard({
       {/* Middle Row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3" style={{ height: '500px' }}>
-          <TransactionTable transactions={filteredTransactions} chartFilter={chartFilter} />
+          <TransactionTable 
+            transactions={filteredTransactions} 
+            chartFilter={chartFilter}
+            pageSize={prefs.tablePageSize}
+            onPageSizeChange={(size) => setPrefs(p => ({ ...p, tablePageSize: size }))}
+          />
         </div>
         <div className="lg:col-span-2" style={{ height: '500px' }}>
           <BreakdownChart 
